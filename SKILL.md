@@ -128,9 +128,37 @@ Self-review has inherent blind spots. Treat your own code as if someone else wro
 
 ## Part 2: Performing Multi-Agent Review
 
-### Agent Architecture
+### Review Modes
 
-Launch 5 parallel agents to independently review:
+Pick the mode that matches the PR's risk level. Say it naturally:
+
+| Mode | Agents | Say This | When to Use |
+|------|--------|----------|-------------|
+| **Quick** | 3 (#1, #2, #3) | "Quick review" / "3-agent review" | Routine PRs, files you know well, minor changes |
+| **Standard** | 5 (all) | "Code review" / "Full review" / "5-agent review" | Feature sprints, multi-file PRs, first-in-prod code |
+| **Focused** | 2 (#2, #3) | "Bug check" / "Focused review" | Tiny PRs, sanity checks, time-scarce |
+
+**Why these groupings:**
+
+| Agent | Signal | Cost | In Quick | In Standard | In Focused |
+|-------|--------|------|----------|-------------|------------|
+| #1 CLAUDE.md Compliance | Catches guideline violations | Medium (reads docs + diff) | ✓ | ✓ | |
+| #2 Bug Detection | Catches real bugs (highest-value) | Medium (reads diff deeply) | ✓ | ✓ | ✓ |
+| #3 History/Blame | Catches regressions | Medium (runs git commands) | ✓ | ✓ | ✓ |
+| #4 Previous PRs | Catches recurring issues | High (gh API calls, slow) | | ✓ | |
+| #5 Code Comments | Catches stale/lying comments | Low (reads diff) | | ✓ | |
+
+**Agents #2 + #3 are always included** — bugs and regressions are the two categories most
+likely to ship undetected. #1 (compliance) joins in Quick mode because guideline drift
+compounds across sprints. #4 + #5 are Standard-only because they have the highest
+false-positive rates and require more verification work from the receiver.
+
+**Estimated cost by mode** (Sonnet, ~2000-line diff):
+- Focused: ~$0.20, ~1 min
+- Quick: ~$0.40, ~1.5 min
+- Standard: ~$0.70, ~2 min
+
+### Agent Architecture
 
 | Agent | Focus | What It Checks |
 |-------|-------|----------------|
