@@ -11,7 +11,7 @@ description: >
 license: MIT
 metadata:
   author: jeremyknows
-  version: "1.1.0"
+  version: "1.2.0"
   category: "Code Quality & Review"
 ---
 
@@ -152,7 +152,29 @@ Each issue scored independently 0-100:
 | 75 | Verified real, important | Keep |
 | 80–100 | Definitely real, significant impact | Keep — report this |
 
-**Threshold: 80+** — Only issues scoring ≥80 get reported.
+**Threshold floor: 80+** — agents never score below 80 for a reportable issue.
+
+### Threshold tuning by review context
+
+Higher threshold = fewer findings, better signal-to-noise. Lower threshold =
+more findings, more verification work for the receiver. Pick based on stakes:
+
+| Context | Recommended threshold | Why |
+|---------|----------------------|-----|
+| Routine PR on mature codebase | **85** | Filter the weakest findings; reduce verification overhead |
+| First-in-prod feature | 80 | Maximize catch rate; accept some noise |
+| Security-sensitive change | 80 | Same — false positives are cheaper than missed exploits |
+| Irreversible architecture decision | 80 | Same — once shipped, hard to un-do |
+| Quick sanity pass on minor change | 90 | Only surface clear wins |
+
+**Observed signal/noise ratios from real runs:**
+- At 80: ~40% actionable (majority either need pushback or are nice-to-haves)
+- At 85: ~60% actionable
+- At 90: ~75% actionable but coverage drops meaningfully
+
+Raising the threshold doesn't reduce the cost of running the 5 agents — they
+still spawn. It only affects what gets surfaced. If the goal is fewer agents
+(cheaper reviews), drop to 3-agent mode (skip #3 and #4 when files are new).
 
 ### What Gets Filtered (False Positives)
 
@@ -410,6 +432,16 @@ Fixed both issues:
 **History-reversal bugs are easy to miss.** Agent #3 is the only one checking for "this PR accidentally un-does a prior fix." Don't skip it just because history review feels slow — this is where the highest-signal, hardest-to-spot bugs hide.
 
 **Self-review blind spots are real.** Performing a review on your own code: declare upfront that you're self-reviewing and lower your confidence threshold to 70+ (you're more likely to rationalize your own choices).
+
+**Agent #1 over-scores document-comparison findings.** Observed pattern: when Agent #1 compares code to a plan/spec/CLAUDE.md and finds a discrepancy, it tends to score 90+ without checking whether the code has a documented justification for the deviation. Two real false-positive modes seen in the wild:
+
+1. **Plan deviation that's actually an architectural improvement.** Plan says "edit file A"; implementation correctly puts the logic in file B because file A is a stateless shell. Scored 97, was wrong. Mitigation: Agent #1's prompt now requires cross-checking surrounding code/comments for a documented reason before scoring ≥85 — see `agent-spawn-templates.md`.
+
+2. **"Types should be regenerated / look different."** Agent claims `types.ts` was hand-edited because a CHECK-constrained column is `string` instead of a union. Verify against OTHER entries in the same generated file — if they match, the tool just emits that way, and the finding is wrong. Scored 92, was wrong.
+
+**Agent #5 over-reports comment polish as findings.** Same pattern class — the agent is structurally inclined to find something, so it reaches for "this comment could be clearer" and scores it high. Mitigation: Agent #5's threshold rule now requires naming a concrete wrong-action scenario — "a reader would misread X and do Y." If the agent can't name the wrong-action, it's polish, not a finding.
+
+**Default threshold trade-off.** Running at 80 surfaces more (catches rarer bugs) but ~40% of findings need pushback. Running at 85 surfaces fewer (may miss rare catches) but ~60% are actionable. For mature codebases on routine PRs, prefer 85. For security-sensitive or irreversible changes, stay at 80 — the cost of pushback is lower than the cost of a missed exploit.
 
 ---
 
