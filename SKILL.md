@@ -85,6 +85,7 @@ This skill requires or references the following external capabilities:
 
 **Spawn templates:** *Read when: spawning any of the 5 review agents — exact prompts for each agent.* `references/agent-spawn-templates.md`
 **Quality scoring:** *Read when: review is complete and you need to score output quality.* `references/review-quality-checklist.md`
+**Post-integration static sites:** *Read when a static/exported marketing or portfolio site has been manually integrated and needs final packaging/review-readiness.* `references/post-integration-static-site-review.md`
 
 ---
 
@@ -453,6 +454,8 @@ Fixed both issues:
 
 **Freeze and re-check review scope.** Before spawning reviewers, write a scope manifest with repo path, branch, HEAD, commit list, and dirty state. After reviewers return, re-run `git status --short --branch` and `git log --since ...` for the same repos before finalizing. If a branch moved or a new commit appeared during the review, review that delta as an addendum and state the concurrency caveat; do not silently claim the original bundle covered it.
 
+**Analysis-only reviews can still create incidental file changes.** Verification commands may mutate generated/framework files even when the user allowed analysis/report only (for example a production build touching a generated type stub). Before finalizing, compare the final dirty state with the frozen scope. Revert only incidental tool-generated changes you caused, explicitly note that cleanup in the report, and leave all user/source changes untouched.
+
 **Confidence scoring is subjective.** Two agents may score the same issue differently. When scores conflict, use the lower score; err toward filtering rather than noise.
 
 **Anti-sycophancy can feel cold to human reviewers.** When processing human feedback without performative acknowledgment, clarify your approach if the reviewer seems confused: "I verify before implementing — I'll confirm what I'm fixing and why."
@@ -464,6 +467,8 @@ Fixed both issues:
 **Self-review blind spots are real.** Performing a review on your own code: declare upfront that you're self-reviewing and lower your confidence threshold to 70+ (you're more likely to rationalize your own choices).
 
 **Review before the next architecture slice.** When a completed slice naturally reveals a tempting next contract change (for example: broadening an enum, making a generic recorder, moving from helper-level proof to route-level proof), pause and review the just-landed work before designing the next slice. Check that commits, tests, docs, and gate language say exactly what was proven — not what the next slice might prove. If review finds a small overclaim in an evidence matrix or baton, tighten the wording and commit that correction before moving on. This prevents "proof inflation" where helper-level evidence quietly becomes route/provider/gate evidence.
+
+**Interrupted review-fix handoffs must preserve exact repo state.** If a review produces local fixes but the session/tool budget ends before commit/push, do not summarize as if the branch is ready. The handoff must name: current branch, whether fixes are uncommitted/unpushed, dirty files or at least the affected paths, verification commands already run, and the exact next safe sequence (`git add`, commit, push, re-freeze scope, addendum review). This keeps the next agent from assuming verified working-tree changes are already part of the reviewed branch.
 
 **Agent #1 over-scores document-comparison findings.** Observed pattern: when Agent #1 compares code to a plan/spec/CLAUDE.md and finds a discrepancy, it tends to score 90+ without checking whether the code has a documented justification for the deviation. Two real false-positive modes seen in the wild:
 
