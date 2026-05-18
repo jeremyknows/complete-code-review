@@ -85,7 +85,10 @@ This skill requires or references the following external capabilities:
 
 **Spawn templates:** *Read when: spawning any of the 5 review agents — exact prompts for each agent.* `references/agent-spawn-templates.md`
 **Quality scoring:** *Read when: review is complete and you need to score output quality.* `references/review-quality-checklist.md`
+**Offline harness proof-quality:** *Read when reviewing local/offline runtime, routing, privacy, or gate harnesses before any live smoke decision.* `references/offline-harness-proof-review.md`
 **Post-integration static sites:** *Read when a static/exported marketing or portfolio site has been manually integrated and needs final packaging/review-readiness.* `references/post-integration-static-site-review.md`
+
+**Pre-PR proof packages:** *Read when a local PR candidate is packaged but not pushed/opened yet, especially when evidence artifacts, privacy scans, gate/status anchors, or PR body copy must be reviewed alongside source/tests.* `references/pre-pr-proof-package-review.md`
 
 ---
 
@@ -452,7 +455,7 @@ Fixed both issues:
 
 **Multi-agent review requires git context.** Agent #3 (History/Blame) and Agent #4 (Past PRs) need `gh` CLI auth and a cloned repo. In environments without git access, skip those two agents and note the gap in the review output.
 
-**Freeze and re-check review scope.** Before spawning reviewers, write a scope manifest with repo path, branch, HEAD, commit list, and dirty state. After reviewers return, re-run `git status --short --branch` and `git log --since ...` for the same repos before finalizing. If a branch moved or a new commit appeared during the review, review that delta as an addendum and state the concurrency caveat; do not silently claim the original bundle covered it.
+**Freeze and re-check review scope.** Before spawning reviewers, write a scope manifest with repo path, branch, HEAD, commit list, and dirty state. After reviewers return, re-run `git status --short --branch`, `git rev-parse HEAD`, and `git log --oneline <frozen_head>..HEAD` for the same repos before finalizing. If a branch moved or a new commit appeared during the review, review that delta as an addendum, rerun the relevant/full verifier set at the new HEAD, and state the concurrency caveat; do not silently claim the original bundle covered it. If the new commit fixes a finding, update the report verdict from "hold" to "pass after local fix" only after verifying the new HEAD, and explicitly call out any PR body/evidence artifacts that still cite the old HEAD.
 
 **Analysis-only reviews can still create incidental file changes.** Verification commands may mutate generated/framework files even when the user allowed analysis/report only (for example a production build touching a generated type stub). Before finalizing, compare the final dirty state with the frozen scope. Revert only incidental tool-generated changes you caused, explicitly note that cleanup in the report, and leave all user/source changes untouched.
 
@@ -467,6 +470,8 @@ Fixed both issues:
 **Self-review blind spots are real.** Performing a review on your own code: declare upfront that you're self-reviewing and lower your confidence threshold to 70+ (you're more likely to rationalize your own choices).
 
 **Review before the next architecture slice.** When a completed slice naturally reveals a tempting next contract change (for example: broadening an enum, making a generic recorder, moving from helper-level proof to route-level proof), pause and review the just-landed work before designing the next slice. Check that commits, tests, docs, and gate language say exactly what was proven — not what the next slice might prove. If review finds a small overclaim in an evidence matrix or baton, tighten the wording and commit that correction before moving on. This prevents "proof inflation" where helper-level evidence quietly becomes route/provider/gate evidence.
+
+**Offline harness proof quality depends on negative controls.** For offline gate/routing/privacy harnesses, a happy-path smoke plus build does not prove readiness for live-smoke planning. Review for explicit wrong-route drops, unauthorized actor drops before ACK, `turnStarted`/ACK-before-start ordering, reply-before-ACK rejection, result-before-ACK/start rejection, duplicate/post-terminal result rejection, raw-ID scanner positive tests, and raw-ID scans over every generated proof/ledger/transcript artifact. See `references/offline-harness-proof-review.md` for the checklist.
 
 **Interrupted review-fix handoffs must preserve exact repo state.** If a review produces local fixes but the session/tool budget ends before commit/push, do not summarize as if the branch is ready. The handoff must name: current branch, whether fixes are uncommitted/unpushed, dirty files or at least the affected paths, verification commands already run, and the exact next safe sequence (`git add`, commit, push, re-freeze scope, addendum review). This keeps the next agent from assuming verified working-tree changes are already part of the reviewed branch.
 
