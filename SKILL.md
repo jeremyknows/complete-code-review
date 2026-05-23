@@ -90,6 +90,8 @@ This skill requires or references the following external capabilities:
 
 **Pre-PR proof packages:** *Read when a local PR candidate is packaged but not pushed/opened yet, especially when evidence artifacts, privacy scans, gate/status anchors, or PR body copy must be reviewed alongside source/tests.* `references/pre-pr-proof-package-review.md`
 
+**Thermo-nuclear code quality review:** *Read when the user asks for a thermonuclear/thermo-nuclear/especially harsh maintainability review, or when a gated infrastructure PR must be reviewed for structural simplification before merge.* `references/thermonuclear-review-rubric.md`; for the full standalone skill, load `thermo-nuclear-code-quality-review`
+
 ---
 
 ## Part 1: When to Request Which Review Type
